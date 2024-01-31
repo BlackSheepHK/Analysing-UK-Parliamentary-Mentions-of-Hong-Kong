@@ -1,82 +1,53 @@
+[TheyWorkForYou]: https://www.theyworkforyou.com/
+# Analysing UK's Parliamentary Mentions of Hong Kong
+## Overview
+The UK has a long historical relationship with Hong Kong. Although Hong Kong ceased to be a British colony in 1997, the Sino-British Joint Declaration of 1984 binds the UK Government with an obligation oversee the implementation of the treaty's principles. While the Foreign, Commonwealth & Development Office's [six-monthly reports on Hong Kong](https://www.gov.uk/government/collections/) published since July 1997 have constituted a core part of this effort, there have also been consistent parliamentary discussions on Hong Kong in both the UK Parliament and regional assemblies, with a notable increase in mentions since the 2019 Anti-Extradition Bill Movement and the National Security Law's introduction.
 
+This project analyses the trend of Hong Kong mentions in the UK Parliament over time, focusing on the varied attention and opinions of different parties and politicians regarding Hong Kong. Key outputs include a dataset of parliamentary mentions since 1919 and visualisations of each party's annual mention frequency from 2002 to 2023, adjusted for the number of seats held. The next phase involves analysing the content of these speeches for deeper insights.
 
-https://www.theyworkforyou.com/api/docs/getHansard?search=Hong+Kong&person=&order=&page=&num=7720&output=json#output
+## Speech and person dataset
+The dataset, 'all_speeches_and_person.csv,' encompasses 16,436 records of parliamentary speeches mentioning 'Hong Kong', sourced from [TheyWorkForYou]'s extensive archive. This archive surpasses the limitations of the UK Parliament's [Hansard search](https://hansard.parliament.uk/search) and [API](https://developer.parliament.uk/), offering comprehensive data including debates, written answers, and ministerial statements across various periods and parliaments. The dataset's constraints align with the coverage of [TheyWorkForYou], detailed [here](https://www.theyworkforyou.com/help/).
 
-House of Commons debates back to the General Election of December 1918;
-Data on MPs back to 1806 or thereabouts;
-House of Commons written answers and written ministerial statements back to the General Election of June 2001;
-House of Commons Public Bill Committees (previously called Standing Committees) back to the start of the 2000–01 session.
-House of Lords Hansard (except Grand Committees) back to around November 1999;
-Data on Lords back to the House of Lords Act 1999;
+Each record in the dataset contains 21 fields. Here's a specification of what each field means:
+| Column                 | Description                                                                                                                                                                       |
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| gid                    | Unique ID for each debate, which typically comprises multiple speeches.                                                                                                           |
+| hdate                  | Date of the speech.                                                                                                                                                               |
+| parent_body            | Title of the debate.                                                                                                                                                              |
+| file_name              | JSON file from which the debate data was retrieved.                                                                                                                               |
+| html_file_name         | HTML file from which the speech was extracted.                                                                                                                                    |
+| debate_type            | Category of the debate, including 'Commons debates', 'Written Answers', 'Scottish Parliament debates', 'Lords debates', 'Scottish Parliament written answers', 'Westminster Hall debates', 'Northern Ireland Assembly debates', 'Written Ministerial Statements', 'Welsh Parliament record', 'Questions to the Mayor of London', and 'Public Bill Committees'. |
+| written_type           | Indicates if the speech is a question or an answer in written debates.                                                                                                            |
+| speech_body            | The actual content of the speech.                                                                                                                                                 |
+| full_url               | Link to the debate's page on [TheyWorkForYou].                                                                                                                                    |
+| relevant_speeches      | Count of speeches mentioning 'Hong Kong' in the same debate.                                                                                                                      |
+| speaker_id and person_id | IDs for uniquely identifying MPs, as used by [Public Whip](https://www.publicwhip.org.uk/) and [TheyWorkForYou].                                                                   |
+| speaker_name           | Current name of the speaker, noting that name changes are common among Lords.                                                                                                     |
+| membership_id          | ID for identifying each person's office, as per [people.json](https://parser.theyworkforyou.com/members.html).                                                                    |
+| membership_start_date  | Start date of the speaker's office term.                                                                                                                                          |
+| membership_end_date    | End date of the speaker's office term.                                                                                                                                            |
+| post_id                | ID for identifying each constituency; not applicable to Lords.                                                                                                                    |
+| post_name              | Name of the speaker's post.                                                                                                                                                       |
+| post_area_name         | Area of the speaker's post.                                                                                                                                                       |
+| party_id               | ID for identifying political parties, as per [people.json](https://parser.theyworkforyou.com/members.html).                                                                       |
+| party_name             | Name of the speaker's party.                                                                                                                                                      |
 
-# Cutoff: 2001-06-07
+### Parsing getHansard's results
+The process of creating the dataset began with querying 'Hong Kong' in [TheyWorkForYou]'s [getHansard](https://www.theyworkforyou.com/api/docs/getHansard), yielding 7,683 results. Through '1_extract_hansard_hong_kong_jsons.ipynb', the results were parsed into a table, 'hansard_hong_kong.csv', and stored in the 'intermediate_outputs' folder. The 'file_name' column in the final dataset corresponds to the JSON result's page number.
 
-https://github.com/mysociety/theyworkforyou/blob/c9c890ab93ecef056fc82cbe87cec0d766c5bba3/www/includes/dbtypes.php
-* listurl: Prefex with https://www.theyworkforyou.com/ -> link to theyworkforyou archive
-* htime: can be removed
-* subsection_id: can be removed if 0
-* collapsed: more matches hidden on the same page; not shown in body or extract; the total matches is n+1
+### Extracting collapsed speeches
+[getHansard](https://www.theyworkforyou.com/api/docs/getHansard)'s results often include collapsed speeches from a single debate. To capture these, '2_extract_collapsed_speeches.ipynb' retrieves and extracts them from the corresponding HTML pages on [TheyWorkForYou], saving the results in 'scrape_results.csv'. The 'html_file_name' in the final dataset denotes the downloaded HTML file name.
 
+### Merging debates and collapsed speeches
+The next step, '3_merge_and_clean.ipynb', combines 'hansard_hong_kong.csv' and 'scrape_results.csv'. It cleans and enhances the interpretability of the data, resulting in 'all_speeches.csv' stored in 'intermediate_outputs'.
 
-Process failed: https://www.theyworkforyou.com/pbc/2021-22/Nationality_and_Borders_Bill/16-0_2021-11-04a.647.2?id=standing3627_NATIONALITY_15-0_2021-11-04a.644.4&amp;s=Hong+Kong
+### Adding person information
+Finally, '4_add_person_info.ipynb' incorporates data on people, posts, memberships, and parties from [people.json](https://parser.theyworkforyou.com/members.html), merging it with 'all_speeches.csv' to produce the comprehensive 'all_speeches_and_person.csv'.
 
-https://data.mysociety.org/categories/theyworkforyou/
+## Visualising each party's frequency of discussing Hong Kong
+This part creates visualisations of each party's annual frequency of Hong Kong mentions from 2002 to 2023, available in the 'graph_outputs' folder. The start year 2002 is due to [TheyWorkForYou]'s archival limitations on the House of Commons' written answers and written ministerial statements. The visualisations include both overall frequency and normalised frequency per seat to account for variations in party size. While the overall frequency graph includes speeches in both the UK Parliament and regional assemblies, the normalised graph only includes speeches in the UK Parliament.
 
-https://www.publicwhip.org.uk/
+'5_seat_distribution.ipynb' extracts the UK Parliament's monthly seats distribution from [people.json](https://parser.theyworkforyou.com/members.html). An outstanding issue concerns a slight discrepancy in the total number of seats for the House of Lords compared to official figures. Any insights or corrections regarding this discrepancy are welcome.
 
-
-# Speech frequency by party each year
-# Top keywords each year / keyword frequency each year
-# Top speakers each year
-# Sentiment analysis
-# Summarise each speaker's viewpoint using LLM
-# Keyword-party distribution like https://www.carbonbrief.org/analysis-the-uk-politicians-who-talk-the-most-about-climate-change/
-
-Speech Length Analysis:
-Analyze the average length of speeches by party, constituency, or individual MPs. This can reveal trends in engagement or verbosity.
-
-Temporal Topic Modeling:
-Examine how certain topics evolve over time. For instance, how discussions on climate change, healthcare, or Brexit have shifted across different parliaments.
-
-Cross-Party Agreement Analysis:
-Identify speeches where MPs from different parties show agreement or consensus on specific issues. This could be done by analyzing similar phrases or keywords used across parties.
-
-Geographical Analysis of Speech Content:
-Analyze if and how the content of speeches correlates with the geographic location of the MP's constituency, such as urban vs. rural issues, local industries, etc.
-
-Comparative Analysis with Public Opinion:
-Compare the frequency and sentiment of topics in parliamentary speeches with public opinion data (from polls, surveys, etc.) on those topics.
-
-Gender Analysis:
-Examine whether there are differences in the topics, length, frequency, or sentiment of speeches between male and female MPs.
-
-Historical Comparison:
-Compare the speeches of current MPs with historical speeches on similar topics to see how perspectives and rhetoric have evolved.
-
-Intertextuality Analysis:
-Look for references to other speeches, literature, or media within the speeches to understand cultural and intellectual influences.
-
-Network Analysis of Speaker Relationships:
-Use mentions of other MPs in speeches to build a network graph showing the relationships and clusters within Parliament.
-
-Predictive Modeling:
-Utilize speech patterns to predict future stances of MPs on upcoming issues or votes.
-
-Impact Analysis:
-Correlate the frequency and sentiment of speeches on specific topics with subsequent legislative changes or public policy shifts.
-
-Language Complexity Analysis:
-Evaluate the complexity of language used by MPs, potentially as a function of their educational background, constituency, or party.
-
-Speech Influence Analysis:
-Analyze how speeches by influential MPs might shift the language and topics of subsequent speeches by others.
-
-Automated Debate Summarization:
-Create summaries of key parliamentary debates, highlighting the main arguments from each side.
-
-Speech-to-Action Correlation:
-Track if and when speeches on certain topics are followed by actions, such as the introduction of new bills or amendments.
-
-Crisis Response Analysis:
-Examine how MPs discuss and respond to national or international crises in their speeches.
-
+## Licensing
+Please adhere to [TheyWorkForYou's terms](https://www.theyworkforyou.com/api/terms#licensing) and the [Open Parliament Licence](https://www.parliament.uk/site-information/copyright/) for using the parliamentary data. The repository's code is publicly available and can be adapted for analyses involving keywords other than 'Hong Kong'. Please feel free to utilise these resources in your work.
