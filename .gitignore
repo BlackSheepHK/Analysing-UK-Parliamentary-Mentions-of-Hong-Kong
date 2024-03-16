@@ -1,3 +1,6 @@
 downloaded_htmls/
 external_datasets/
 hansard_hong_kong/
+speech_summaries_output.ipynb
+speech_summaries.json
+speech_summaries_search_index.json
